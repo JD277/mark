@@ -1,21 +1,24 @@
 import cv2
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import random  # Simulación del sensor de propano
 
 # Configuración
 HOST = "0.0.0.0"
 PORT = 8000
 
-# Abrir la cámara (0 es la cámara predeterminada)
+# Abrir la cámara (0 es la predeterminada)
 cap = cv2.VideoCapture(0)
 
-# Ajustar resolución si quieres mejorar velocidad
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 160)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 120)
-encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 25]
+# Ajustar resolución baja para reducir latencia
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
 
 # Variable global para almacenar el último frame
 last_frame = None
+
+# Simulación del sensor de propano
+propano_value = 0
 
 def capture_frames():
     global last_frame
@@ -23,16 +26,9 @@ def capture_frames():
         ret, frame = cap.read()
         if not ret:
             break
-        # Guardamos el último frame para enviarlo cuando se solicite
         last_frame = frame
 
 class CamaraHandler(BaseHTTPRequestHandler):
-    def _send_response(self, message):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write(bytes(message, "utf-8"))
-
     def do_GET(self):
         if self.path == "/camara":
             self.send_response(200)
@@ -42,10 +38,8 @@ class CamaraHandler(BaseHTTPRequestHandler):
             try:
                 while True:
                     if last_frame is not None:
-                        # Codificar frame como JPEG
-                        ret, jpeg = cv2.imencode(".jpg", last_frame,encode_param)
+                        ret, jpeg = cv2.imencode(".jpg", last_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
                         if ret:
-                            # Escribir frame al cliente
                             self.wfile.write(b"--frame\r\n")
                             self.send_header("Content-type", "image/jpeg")
                             self.send_header("Content-length", str(len(jpeg.tobytes())))
@@ -54,21 +48,22 @@ class CamaraHandler(BaseHTTPRequestHandler):
                             self.wfile.write(b"\r\n")
             except Exception as e:
                 print(f"[!] Cliente desconectado: {e}")
-        elif self.path == "/forward":
-            print("Ejecutando: Avanzar")
-            self._send_response("Moviendo hacia adelante")
 
-        elif self.path == "/left":
-            print("Ejecutando: Girar izquierda")
-            self._send_response("Girando a la izquierda")
+        elif self.path.startswith("/command"):
+            command = self.path.split("/")[-1]
+            print(f"[+] Comando recibido: {command}")
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(bytes(f"Comando ejecutado: {command}", "utf-8"))
 
-        elif self.path == "/backward":
-            print("Ejecutando: Retroceder")
-            self._send_response("Moviendo hacia atrás")
-
-        elif self.path == "/right":
-            print("Ejecutando: Girar derecha")
-            self._send_response("Girando a la derecha")
+        elif self.path == "/propano":
+            global propano_value
+            propano_value = random.randint(0, 100)  # Simulación
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(bytes(f'{{"propano": {propano_value}}}', "utf-8"))
 
         else:
             self.send_error(404, "No encontrado")

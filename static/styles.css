@@ -1,0 +1,44 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f4f4f4;
+}
+
+.video-container {
+    margin-top: 20px;
+}
+
+#cameraFeed {
+    width: 320px;
+    height: 240px;
+    border: 2px solid #333;
+}
+
+.controls {
+    margin-top: 30px;
+    display: inline-block;
+    vertical-align: top;
+}
+
+.secondary-controls {
+    margin-left: 50px;
+}
+
+.controls button {
+    padding: 15px 25px;
+    font-size: 20px;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+}
+
+.controls button:hover {
+    background-color: #45a049;
+}
+
+.sensor {
+    margin-top: 20px;
+}

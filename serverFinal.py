@@ -22,7 +22,10 @@ def capture_frames():
         ret, frame = cap.read()
         if not ret:
             break
-        last_frame = frame
+        frame = cv2.resize(frame, (320, 240))
+        ret, jpeg = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+        if ret:
+            last_frame = jpeg.tobytes()
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -51,7 +54,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(f.read())
 
         # Transmisión MJPEG
-        if self.path == "/camara":
+        elif self.path == "/camara":
             self.send_response(200)
             self.send_header("Content-type", "multipart/x-mixed-replace; boundary=frame")
             self.end_headers()
@@ -59,28 +62,12 @@ class RequestHandler(BaseHTTPRequestHandler):
             try:
                 while True:
                     if last_frame is not None:
-                        ret, jpeg = cv2.imencode(".jpg", last_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
-                        if ret:
-                            self.wfile.write(b"--frame\r\n")
-                            self.send_header("Content-type", "image/jpeg")
-                            self.send_header("Content-length", str(len(jpeg.tobytes())))
-                            self.end_headers()
-                            self.wfile.write(jpeg.tobytes())
-                            self.wfile.write(b"\r\n")
-            except Exception as e:
-                print(f"[!] Cliente desconectado: {e}")
-
-            try:
-                while True:
-                    if last_frame is not None:
-                        ret, jpeg = cv2.imencode(".jpg", last_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
-                        if ret:
-                            self.wfile.write(b"--frame\r\n")
-                            self.send_header("Content-type", "image/jpeg")
-                            self.send_header("Content-length", str(len(jpeg.tobytes())))
-                            self.end_headers()
-                            self.wfile.write(jpeg.tobytes())
-                            self.wfile.write(b"\r\n")
+                        self.wfile.write(b"--frame\r\n")
+                        self.send_header("Content-type", "image/jpeg")
+                        self.send_header("Content-length", str(len(last_frame)))
+                        self.end_headers()
+                        self.wfile.write(last_frame)
+                        self.wfile.write(b"\r\n")
             except Exception as e:
                 print(f"[!] Cliente desconectado: {e}")
 

@@ -3,6 +3,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 import os
 import random
+from board import ArduinoController  # 🔁 Importamos desde otro archivo
 
 # Configuración
 VIDEO_PORT = 8000
@@ -17,13 +18,20 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 120)
 last_frame = None
 propano_value = 0
 
+# Inicializar el controlador de Arduino
+arduino = ArduinoController("COM4")  # Cambia por tu puerto real
+
+# Configurar componentes del Arduino
+arduino.setup_motor(2, 3, "motor_izquierda", 5)
+arduino.setup_motor(7, 8, "motor_derecha", 6)
+arduino.setup_gas_sensor(0, "mq2")  # Sensor MQ2 en A0
+
 def capture_frames():
     global last_frame
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        # Reducir resolución si es necesario
         frame = cv2.resize(frame, (160, 120))
         ret, jpeg = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
         if ret:
@@ -95,6 +103,25 @@ class CommandRequestHandler(BaseHTTPRequestHandler):
         elif self.path.startswith("/command"):
             command = self.path.split("/")[-1]
             print(f"[+] Comando recibido: {command}")
+
+            if command == "Avanza":
+                arduino.set_motor_speed("motor_izquierda", 255)
+                arduino.set_motor_speed("motor_derecha", 255)
+            elif command == "Retrocede":
+                arduino.set_motor_speed("motor_izquierda", -255)
+                arduino.set_motor_speed("motor_derecha", -255)
+            elif command == "GiraIzquierda":
+                arduino.set_motor_speed("motor_izquierda", -255)
+                arduino.set_motor_speed("motor_derecha", 255)
+            elif command == "GiraDerecha":
+                arduino.set_motor_speed("motor_izquierda", 255)
+                arduino.set_motor_speed("motor_derecha", -255)
+            elif command == "Detener":
+                arduino.set_motor_speed("motor_izquierda", 0)
+                arduino.set_motor_speed("motor_derecha", 0)
+
+            # Agregar más comandos para brazo y camara si es necesario
+
             self.send_response(200)
             self.send_header("Content-type", "text/plain")
             self.end_headers()
@@ -102,11 +129,11 @@ class CommandRequestHandler(BaseHTTPRequestHandler):
 
         # Sensor de gas
         elif self.path == "/gas":
-            propano_value = random.uniform(0, 1.0)  # Simulación
+            gas_level = arduino.read_gas_sensor("mq2")
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            self.wfile.write(bytes(f'{{"gas": {propano_value}}}', "utf-8"))
+            self.wfile.write(bytes(f'{{"gas": {gas_level}}}', "utf-8"))
 
         else:
             self.send_error(404, "No encontrado")
@@ -118,13 +145,13 @@ def run_command_server():
     httpd.serve_forever()
 
 if __name__ == "__main__":
-    # Iniciar captura de frames en un hilo separado
+    # Iniciar captura de frames en un hilo
     capture_thread = threading.Thread(target=capture_frames, daemon=True)
     capture_thread.start()
 
-    # Iniciar servidor de video en un hilo
+    # Iniciar servidor de video
     video_thread = threading.Thread(target=run_video_server, daemon=True)
     video_thread.start()
 
-    # Iniciar servidor de comandos en el hilo principal
+    # Iniciar servidor de comandos
     run_command_server()

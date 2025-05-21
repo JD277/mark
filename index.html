@@ -2,38 +2,43 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Control de Robot</title>
-    <link rel="stylesheet" href="static/style.css">
+    <title>Control del Robot</title>
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 <body>
     <h1>Control Remoto del Robot</h1>
 
     <!-- Transmisión de video -->
     <div class="video-container">
-        <img id="cameraFeed" src="/camara" alt="Cámara del robot">
+        <img id="cameraFeed" src="http://192.168.x.x:8000/camara?timestamp=0" alt="Cámara del robot">
     </div>
 
     <!-- Botones principales de movimiento -->
     <div class="controls">
-        <button id="avanza">↑</button><br>
-        <button id="giroIzquierda">←</button>
-        <button id="retrocede">↓</button>
-        <button id="giroDerecha">→</button>
+        <button id="avanza">↑ Avanzar</button><br>
+        <button id="giroIzquierda">← Giro Izquierda</button>
+        <button id="retrocede">↓ Retroceder</button>
+        <button id="giroDerecha">→ Giro Derecha</button>
     </div>
 
     <!-- Segunda cruceta para brazo y cámara -->
     <div class="controls secondary-controls">
-        <button id="giroBrazoIzquierda">↶</button><br>
-        <button id="bajarBrazo">↓</button>
-        <button id="subirBrazo">↑</button>
-        <button id="giroBrazoDerecha">↷</button><br>
-        <button id="bajarCamara"> камер ↓</button>
-        <button id="subirCamara"> камер ↑</button>
+        <button id="giroBrazoIzquierda">↶ Girar Brazo Izquierda</button><br>
+        <button id="bajarBrazo">↓ Bajar Brazo</button>
+        <button id="subirBrazo">↑ Subir Brazo</button>
+        <button id="giroBrazoDerecha">↷ Girar Brazo Derecha</button><br>
+        <button id="bajarCamara"> камер ↓ Bajar Cámara</button>
+        <button id="subirCamara"> камер ↑ Subir Cámara</button>
     </div>
 
     <!-- Sensor de gas -->
     <div class="sensor">
         <p>Sensor de Gas: <span id="gasValue">0.0</span></p>
+    </div>
+
+    <!-- Mensaje de estado -->
+    <div class="status">
+        <p id="statusMessage"></p>
     </div>
 
     <script src="static/script.js"></script>

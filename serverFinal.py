@@ -1,12 +1,13 @@
-import os
+import cv2
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
-import cv2
+import os
 import random
 
 # Configuración
+VIDEO_PORT = 8000
+COMMAND_PORT = 8001
 HOST = "0.0.0.0"
-PORT = 8000
 
 # Abrir la cámara
 cap = cv2.VideoCapture(0)
@@ -22,39 +23,19 @@ def capture_frames():
         ret, frame = cap.read()
         if not ret:
             break
-        frame = cv2.resize(frame, (320, 240))
+        # Reducir resolución si es necesario
+        frame = cv2.resize(frame, (160, 120))
         ret, jpeg = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
         if ret:
             last_frame = jpeg.tobytes()
 
-class RequestHandler(BaseHTTPRequestHandler):
+# ----------------------------
+# Servidor de Video (Puerto 8000)
+# ----------------------------
+
+class VideoRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Servir archivos estáticos
-        if self.path.startswith("/static/"):
-            file_path = self.path[1:]  # Quitar el '/'
-            if os.path.exists(file_path):
-                with open(file_path, 'rb') as f:
-                    self.send_response(200)
-                    if file_path.endswith(".css"):
-                        self.send_header("Content-type", "text/css")
-                    elif file_path.endswith(".js"):
-                        self.send_header("Content-type", "application/javascript")
-                    self.end_headers()
-                    self.wfile.write(f.read())
-                return
-            else:
-                self.send_error(404, "Archivo no encontrado")
-
-        # Ruta principal
-        elif self.path == "/":
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            with open("index.html", "rb") as f:
-                self.wfile.write(f.read())
-
-        # Transmisión MJPEG
-        elif self.path == "/camara":
+        if self.path == "/camara":
             self.send_response(200)
             self.send_header("Content-type", "multipart/x-mixed-replace; boundary=frame")
             self.end_headers()
@@ -70,6 +51,45 @@ class RequestHandler(BaseHTTPRequestHandler):
                         self.wfile.write(b"\r\n")
             except Exception as e:
                 print(f"[!] Cliente desconectado: {e}")
+
+        else:
+            self.send_error(404, "No encontrado")
+
+def run_video_server():
+    server_address = (HOST, VIDEO_PORT)
+    httpd = HTTPServer(server_address, VideoRequestHandler)
+    print(f"[Servidor de Video] Escuchando en http://{HOST}:{VIDEO_PORT}")
+    httpd.serve_forever()
+
+# ----------------------------
+# Servidor de Comandos (Puerto 8001)
+# ----------------------------
+
+class CommandRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        # Ruta principal
+        if self.path == "/":
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            with open("index.html", "rb") as f:
+                self.wfile.write(f.read())
+
+        # Servir archivos estáticos
+        elif self.path.startswith("/static/"):
+            file_path = self.path[1:]  # Quitar el '/'
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as f:
+                    self.send_response(200)
+                    if file_path.endswith(".css"):
+                        self.send_header("Content-type", "text/css")
+                    elif file_path.endswith(".js"):
+                        self.send_header("Content-type", "application/javascript")
+                    self.end_headers()
+                    self.wfile.write(f.read())
+                return
+            else:
+                self.send_error(404, "Archivo no encontrado")
 
         # Comandos
         elif self.path.startswith("/command"):
@@ -91,10 +111,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, "No encontrado")
 
-def run_server():
-    server_address = (HOST, PORT)
-    httpd = HTTPServer(server_address, RequestHandler)
-    print(f"[Servidor iniciado] Escuchando en http://{HOST}:{PORT}")
+def run_command_server():
+    server_address = (HOST, COMMAND_PORT)
+    httpd = HTTPServer(server_address, CommandRequestHandler)
+    print(f"[Servidor de Comandos] Escuchando en http://{HOST}:{COMMAND_PORT}")
     httpd.serve_forever()
 
 if __name__ == "__main__":
@@ -102,5 +122,9 @@ if __name__ == "__main__":
     capture_thread = threading.Thread(target=capture_frames, daemon=True)
     capture_thread.start()
 
-    # Iniciar servidor HTTP
-    run_server()
+    # Iniciar servidor de video en un hilo
+    video_thread = threading.Thread(target=run_video_server, daemon=True)
+    video_thread.start()
+
+    # Iniciar servidor de comandos en el hilo principal
+    run_command_server()

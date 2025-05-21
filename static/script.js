@@ -1,18 +1,22 @@
-// Función para enviar comandos al servidor
-function sendCommand(command) {
-    console.log("Enviando comando:", command);
+// Función para mostrar mensajes en la interfaz
+function showStatus(message) {
+    document.getElementById("statusMessage").textContent = message;
+}
 
-    fetch(`/command/${encodeURIComponent(command)}`)
+// Enviar comando al servidor de comandos (puerto 8001)
+function sendCommand(command) {
+    showStatus(`Enviando: ${command}`);
+    fetch(`${window.location.origin}/command/${command}`)
         .then(response => response.text())
         .then(data => {
-            console.log("Servidor respondió:", data);
+            showStatus(`Ejecutado: ${command}`);
         })
         .catch(error => {
             console.error("Error al enviar comando:", error);
+            showStatus("Error: No se pudo enviar el comando");
         });
 }
 
-// Asignar eventos a cada botón
 document.addEventListener('DOMContentLoaded', () => {
     const buttons = {
         'avanza': 'Avanza',
@@ -39,20 +43,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Actualizar valor del sensor cada segundo
-    setInterval(() => {
-        fetch("/gas")
+    /*setInterval(() => {
+        fetch(`${window.location.origin}/gas`)
             .then(response => response.json())
             .then(data => {
                 document.getElementById("gasValue").textContent = data.gas.toFixed(2);
             })
-            .catch(error => console.error("Error al obtener datos del gas:", error));
-    }, 1000);
+            .catch(error => {
+                console.error("Error al obtener datos del gas:", error);
+                document.getElementById("gasValue").textContent = "N/A";
+            });
+    }, 1000);*/
 
     // Refrescar imagen de la cámara para evitar caché
     function refreshCameraFeed() {
         const img = document.getElementById("cameraFeed");
-        img.src = `/camara`;
+        img.src = `${window.location.origin.replace("8001","8000")}/camara`;
     }
 
-    setInterval(refreshCameraFeed, 1000);
+    setInterval(refreshCameraFeed, 500);
 });

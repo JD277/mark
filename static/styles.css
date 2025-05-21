@@ -26,7 +26,7 @@ body {
 
 .controls button {
     padding: 15px 25px;
-    font-size: 20px;
+    font-size: 16px;
     margin: 5px;
     cursor: pointer;
     border-radius: 5px;
@@ -41,4 +41,10 @@ body {
 
 .sensor {
     margin-top: 20px;
+    font-size: 20px;
+}
+
+.status {
+    margin-top: 20px;
+    font-weight: bold;
 }
